@@ -8,6 +8,10 @@ def main():
 
         # Wait for user input
         command = input()
+        if command == "exit":
+            mainLoop = False
+            break
+        
         print(f"{command}: command not found")
 
 
