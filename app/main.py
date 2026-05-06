@@ -45,7 +45,7 @@ def main():
 
             # type command
             elif command.startswith("type "):
-                if command[5:] in command_types and command_types[cmd[5:]] == "builtin":
+                if command[5:] in command_types and command_types[command[5:]] == "builtin":
                     print(f"{command[5:]} is a shell builtin")
                 else:
                     find_executable(command[5:])
