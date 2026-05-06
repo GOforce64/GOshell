@@ -8,11 +8,16 @@ def main():
 
         # Wait for user input
         command = input()
+
         if command.lower() == "exit":
             mainLoop = False
             break
 
-        print(f"{command}: command not found")
+        elif command.startswith("echo "):
+            print(command[5:])
+            
+        else:
+            print(f"{command}: command not found")
 
 
 if __name__ == "__main__":
