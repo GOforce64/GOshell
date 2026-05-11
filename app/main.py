@@ -5,10 +5,9 @@ from pathlib import Path
 command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin"}
 
 
-
 def find_executable(command):
     found = False
-    path_value = os.environ.get("PATH", "")
+    path_value = os.environ.get("PATH", "") # get returns PATH var or empty string if not found
     if path_value:
         for directory in path_value.split(os.pathsep):
             if not directory:
