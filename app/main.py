@@ -1,6 +1,7 @@
 import sys
 import os
 from pathlib import Path
+import subprocess
 
 command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin"}
 
@@ -17,11 +18,15 @@ def find_executable(command):
                 continue
             candidate = path / command # merges path object, example: candidate = Path("/usr/bin/python") (works OS independesnty to merge path strings)
             if candidate.is_file() and os.access(candidate, os.X_OK):
-                print(f"{command} is {candidate}")
-                found = True
-                break
-    if not found:
+                return [True, command, candidate]
+    return [False, command, candidate]
+
+def search_output(command, candidate = ""):
+    if candidate != "":
+        print(f"{command} is {candidate}")
+    else:
         print(f"{command}: not found")
+        
 
 def main():
     mainLoop = True
@@ -33,6 +38,7 @@ def main():
 
         # No input, new line
         if command:
+            commandList = command.split()
             # exit command
             if command.lower() == "exit":
                 mainLoop = False
@@ -47,7 +53,22 @@ def main():
                 if command[5:] in command_types and command_types[command[5:]] == "builtin":
                     print(f"{command[5:]} is a shell builtin")
                 else:
-                    find_executable(command[5:])
+                    result = find_executable(command[5:])
+                    if result[0] == True:
+                        search_output(result[1], result[2])
+                    else:
+                        search_output(result[1])
+
+            # run if executable
+            
+            elif find_executable(commandList[0])[0] == True:
+                result = subprocess.run(
+                    commandList,
+                    capture_output=True,
+                    text=True)
+                print("STDOUT:", result.stdout)
+                #print("STDERR:", result.stderr)
+                #print("CODE:", result.returncode)
 
             # unknown command
             else:
