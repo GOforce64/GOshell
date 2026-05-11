@@ -62,11 +62,7 @@ def main():
             # run if executable
             
             elif find_executable(commandList[0])[0] == True:
-                result = subprocess.run(
-                    commandList,
-                    capture_output=True,
-                    text=True)
-                print("STDOUT:", result.stdout)
+                result = subprocess.run(commandList)
                 #print("STDERR:", result.stderr)
                 #print("CODE:", result.returncode)
 
