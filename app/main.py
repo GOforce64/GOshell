@@ -75,8 +75,9 @@ def main():
 
             # run if executable
             elif executable[0]:
-                commandList[0] = str(executable[2])
-                subprocess.run(commandList)
+                subprocess.run(
+                commandList,
+                executable=str(executable[2]))
 
             # unknown command
             else:
