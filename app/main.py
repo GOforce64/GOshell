@@ -60,7 +60,7 @@ def main():
                 break
 
             # echo command
-            elif command.startswith("echo "):
+            elif commandList[0] == "echo":
                 print(command[5:])
 
             # type command
@@ -81,13 +81,14 @@ def main():
             # cd command
             elif command.startswith("cd "):
                 try:
-                    os.chdir(command[1])
+                    os.chdir(command[3:])
                 except FileNotFoundError:
                     print(f"cd: {command[3:]}: No such file or directory")
                 except NotADirectoryError:
                     print(f"cd: {command[3:]}: Not a directory")
                 except PermissionError:
                     print(f"cd: {command[3:]}: Permission denied")
+                continue
 
             # run if executable
             elif executable[0]:
