@@ -45,6 +45,7 @@ def main():
     mainLoop = True
     while mainLoop:
         sys.stdout.write("$ ")
+        sys.stdout.flush()
 
         # Wait for user input
         command = input()
