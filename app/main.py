@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 
-command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin", "pwd": "builtin"}
+command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin", "pwd": "builtin", "cd": "builtin"}
 
 
 def find_executable(command):
@@ -76,6 +76,17 @@ def main():
             # pwd command
             elif command == "pwd":
                 print(Path.cwd())
+
+            # cd command
+            elif command.startswith("cd "):
+                try:
+                    os.chdir(command[1])
+                except FileNotFoundError:
+                    print(f"cd: {command[3:]}: No such file or directory")
+                except NotADirectoryError:
+                    print(f"cd: {command[3:]}: Not a directory")
+                except PermissionError:
+                    print(f"cd: {command[3:]}: Permission denied")
 
             # run if executable
             elif executable[0]:
