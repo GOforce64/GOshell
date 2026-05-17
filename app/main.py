@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 
-command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin"}
+command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin", "pwd": "builtin"}
 
 
 def find_executable(command):
