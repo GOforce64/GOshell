@@ -7,19 +7,32 @@ command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin"}
 
 
 def find_executable(command):
-    found = False
     path_value = os.environ.get("PATH", "") # get returns PATH var or empty string if not found
-    if path_value:
-        for directory in path_value.split(os.pathsep):
-            if not directory:
-                continue
-            path = Path(directory)
-            if not path.is_dir():
-                continue
-            candidate = path / command # merges path object, example: candidate = Path("/usr/bin/python") (works OS independesnty to merge path strings)
+
+    # Windows executable extensions
+    extensions = os.environ.get("PATHEXT", "").split(os.pathsep)
+
+    # Linux/macOS support
+    if not extensions:
+        extensions = [""]
+
+    for directory in path_value.split(os.pathsep):
+        if not directory:
+            continue
+
+        path = Path(directory)
+
+        if not path.is_dir():
+            continue
+
+        # Try command directly AND with extensions
+        for ext in [""] + extensions:
+            candidate = path / (command + ext)
+
             if candidate.is_file() and os.access(candidate, os.X_OK):
                 return [True, command, candidate]
-    return [False, command, candidate]
+
+    return [False, command, ""]
 
 def search_output(command, candidate = ""):
     if candidate != "":
@@ -39,6 +52,7 @@ def main():
         # No input, new line
         if command:
             commandList = command.split()
+            executable = find_executable(commandList[0])
             # exit command
             if command.lower() == "exit":
                 mainLoop = False
@@ -60,11 +74,9 @@ def main():
                         search_output(result[1])
 
             # run if executable
-            
-            elif find_executable(commandList[0])[0] == True:
-                result = subprocess.run(commandList)
-                #print("STDERR:", result.stderr)
-                #print("CODE:", result.returncode)
+            elif executable[0]:
+                commandList[0] = str(executable[2])
+                subprocess.run(commandList)
 
             # unknown command
             else:
