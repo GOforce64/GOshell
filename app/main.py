@@ -79,15 +79,21 @@ def main():
                 print(Path.cwd())
 
             # cd command
-            elif command.startswith("cd "):
+            elif commandList[0] == "cd":
+                if len(commandList) == 1:
+                    os.chdir(Path.home())
+                    continue
+                elif (commandList[1] == "~"):
+                    os.chdir(Path.home())
+                    continue
                 try:
-                    os.chdir(command[3:])
+                    os.chdir(commandList[1])
                 except FileNotFoundError:
-                    print(f"cd: {command[3:]}: No such file or directory")
+                    print(f"cd: {commandList[1]}: No such file or directory")
                 except NotADirectoryError:
-                    print(f"cd: {command[3:]}: Not a directory")
+                    print(f"cd: {commandList[1]}: Not a directory")
                 except PermissionError:
-                    print(f"cd: {command[3:]}: Permission denied")
+                    print(f"cd: {commandList[1]}: Permission denied")
                 continue
 
             # run if executable
