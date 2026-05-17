@@ -73,6 +73,10 @@ def main():
                     else:
                         search_output(result[1])
 
+            # pwd command
+            elif command == "pwd":
+                print(Path.cwd())
+
             # run if executable
             elif executable[0]:
                 subprocess.run(
