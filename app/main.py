@@ -2,6 +2,7 @@ import sys
 import os
 from pathlib import Path
 import subprocess
+import shlex
 
 command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin", "pwd": "builtin", "cd": "builtin"}
 
@@ -52,7 +53,7 @@ def main():
 
         # No input, new line
         if command:
-            commandList = command.split()
+            commandList = shlex.split(command)
             executable = find_executable(commandList[0])
             # exit command
             if command.lower() == "exit":
