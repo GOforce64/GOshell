@@ -62,10 +62,10 @@ def main():
 
             # echo command
             elif commandList[0] == "echo":
-                print(command[5:])
+                print(" ".join(commandList[1:]))
 
             # type command
-            elif command.startswith("type "):
+            elif commandList[0] == "type":
                 if command[5:] in command_types and command_types[command[5:]] == "builtin":
                     print(f"{command[5:]} is a shell builtin")
                 else:
