@@ -141,6 +141,10 @@ def main():
                     with open(commandList[redirectIndex + 1], "w") as f:
                         for line in process.stdout:
                             f.write(line)
+
+                    for line in process.stderr:
+                        print(line, end="")
+                        
                     process.wait()
 
             # unknown command
