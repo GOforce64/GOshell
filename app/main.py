@@ -69,10 +69,9 @@ def main():
             out_buf = StringIO()
             err_buf = StringIO()
             
-            if len(commandList) > 1:
-                for command, index in enumerate(commandList):
-                    if commandList[index] == "1>" or commandList[index] == ">":
-                        redirectIndex = index
+            for index, command in enumerate(commandList):
+                if commandList[index] == "1>" or commandList[index] == ">":
+                    redirectIndex = index
 
             # exit command
             if commandList[0].lower() == "exit":
