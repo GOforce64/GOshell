@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 import subprocess
 import shlex
+from io import StringIO
+from contextlib import redirect_stdout, redirect_stderr
 
 command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin", "pwd": "builtin", "cd": "builtin"}
 
@@ -35,12 +37,20 @@ def find_executable(command):
 
     return [False, command, ""]
 
-def search_output(command, candidate = ""):
-    if candidate != "":
-        print(f"{command} is {candidate}")
+def search_output(command, candidate = "", redirectIndex = -1, out_buf = None, err_buf = None):
+    if redirectIndex == -1:
+        if candidate != "":
+            print(f"{command} is {candidate}")
+        else:
+            print(f"{command}: not found")
     else:
-        print(f"{command}: not found")
-        
+        redirect_stdout(out_buf)
+        redirect_stderr(err_buf)
+        with open(commandList[redirectIndex + 1], "w") as f:
+            if candidate != "":
+                f.write(f"{command} is {candidate}\n")
+            else:
+                f.write(f"{command}: not found\n")
 
 def main():
     mainLoop = True
@@ -55,25 +65,46 @@ def main():
         if command:
             commandList = shlex.split(command)
             executable = find_executable(commandList[0])
+            redirectIndex = -1
+            out_buf = StringIO()
+            err_buf = StringIO()
+            
+            if len(commandList) > 1:
+                for command, index in enumerate(commandList):
+                    if commandList[index] == "1>" or commandList[index] == ">":
+                        redirectIndex = index
+
             # exit command
-            if command.lower() == "exit":
+            if commandList[0].lower() == "exit":
                 mainLoop = False
                 break
 
             # echo command
             elif commandList[0] == "echo":
-                print(" ".join(commandList[1:]))
+                if redirectIndex == -1:
+                    print(" ".join(commandList[1:]))
+                else:
+                    redirect_stdout(out_buf)
+                    redirect_stderr(err_buf)
+                    with open(commandList[redirectIndex + 1], "w") as f:
+                        f.write(out_buf.getvalue())
 
             # type command
             elif commandList[0] == "type":
-                if command[5:] in command_types and command_types[command[5:]] == "builtin":
-                    print(f"{command[5:]} is a shell builtin")
-                else:
-                    result = find_executable(command[5:])
-                    if result[0] == True:
-                        search_output(result[1], result[2])
+                if commandList[1] in command_types and command_types[commandList[1]] == "builtin":
+                    if redirectIndex == -1:
+                        print(f"{command[5:]} is a shell builtin")
                     else:
-                        search_output(result[1])
+                        redirect_stdout(out_buf)
+                        redirect_stderr(err_buf)
+                        with open(commandList[redirectIndex + 1], "w") as f:
+                            f.write(out_buf.getvalue())
+                else:
+                    result = find_executable(commandList[1])
+                    if result[0] == True:
+                        search_output(result[1], result[2], redirectIndex, out_buf, err_buf)
+                    else:
+                        search_output(result[1], "", redirectIndex, out_buf, err_buf)
 
             # pwd command
             elif command == "pwd":
@@ -99,9 +130,22 @@ def main():
 
             # run if executable
             elif executable[0]:
-                subprocess.run(
-                commandList,
-                executable=str(executable[2]))
+                if redirectIndex == -1:
+                    subprocess.run(
+                    commandList,
+                    executable=str(executable[2]))
+                else:
+                    process = subprocess.Popen(
+                    commandList,
+                    executable=str(executable[2]),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True)
+
+                    with open(commandList[redirectIndex + 1], "w") as f:
+                        for line in process.stdout:
+                            f.write(line)
+                    process.wait()
 
             # unknown command
             else:
