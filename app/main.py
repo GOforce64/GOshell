@@ -94,11 +94,18 @@ def main():
 
             # echo command
             elif commandList[0] == "echo":
-                if redirectIndex == -1:
-                    print(" ".join(commandList[1:]))
-                else:
+                # find the first redirect position (either 1> or 2>)
+                cutoff = min(
+                    redirectIndex if redirectIndex != -1 else len(commandList),
+                    errorIndex if errorIndex != -1 else len(commandList)
+                )
+                content = " ".join(commandList[1:cutoff]) + "\n"
+
+                if redirectIndex != -1:
                     with open(commandList[redirectIndex + 1], "w") as f:
-                        f.write(" ".join(commandList[1:redirectIndex]) + "\n")  # stop before redirectIndex
+                        f.write(content)
+                else:
+                    print(content, end="")
 
             # type command
             elif commandList[0] == "type":
