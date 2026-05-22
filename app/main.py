@@ -84,7 +84,7 @@ def main():
                     print(" ".join(commandList[1:]))
                 else:
                     with open(commandList[redirectIndex + 1], "w") as f:
-                        f.write(" ".join(commandList[1:]) + "\n")  # write directly
+                        f.write(" ".join(commandList[1:redirectIndex]) + "\n")  # stop before redirectIndex
 
             # type command
             elif commandList[0] == "type":
@@ -102,7 +102,7 @@ def main():
                         search_output(result[1], "", redirectIndex, out_buf, err_buf)
 
             # pwd command
-            elif command == "pwd":
+            elif commandList[0] == "pwd":
                 print(Path.cwd())
 
             # cd command
