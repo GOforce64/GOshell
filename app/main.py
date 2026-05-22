@@ -83,21 +83,17 @@ def main():
                 if redirectIndex == -1:
                     print(" ".join(commandList[1:]))
                 else:
-                    redirect_stdout(out_buf)
-                    redirect_stderr(err_buf)
                     with open(commandList[redirectIndex + 1], "w") as f:
-                        f.write(out_buf.getvalue())
+                        f.write(" ".join(commandList[1:]) + "\n")  # write directly
 
             # type command
             elif commandList[0] == "type":
                 if commandList[1] in command_types and command_types[commandList[1]] == "builtin":
                     if redirectIndex == -1:
-                        print(f"{command[5:]} is a shell builtin")
+                        print(f"{commandList[1]} is a shell builtin")
                     else:
-                        redirect_stdout(out_buf)
-                        redirect_stderr(err_buf)
                         with open(commandList[redirectIndex + 1], "w") as f:
-                            f.write(out_buf.getvalue())
+                            f.write(f"{commandList[1]} is a shell builtin\n")
                 else:
                     result = find_executable(commandList[1])
                     if result[0] == True:
@@ -129,17 +125,18 @@ def main():
 
             # run if executable
             elif executable[0]:
+                actualCommand = commandList[:redirectIndex] if redirectIndex != -1 else commandList
                 if redirectIndex == -1:
                     subprocess.run(
-                    commandList,
-                    executable=str(executable[2]))
+                        actualCommand,
+                        executable=str(executable[2]))
                 else:
                     process = subprocess.Popen(
-                    commandList,
-                    executable=str(executable[2]),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True)
+                        actualCommand,         
+                        executable=str(executable[2]),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True)
 
                     with open(commandList[redirectIndex + 1], "w") as f:
                         for line in process.stdout:
