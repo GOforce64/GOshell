@@ -106,6 +106,10 @@ def main():
                         f.write(content)
                 else:
                     print(content, end="")
+                # Always create the stderr file even if empty
+                if errorIndex != -1:
+                    with open(commandList[errorIndex + 1], "w") as f:
+                        f.write("")
 
             # type command
             elif commandList[0] == "type":
