@@ -52,6 +52,16 @@ def search_output(command, candidate = "", redirectIndex = -1, out_buf = None, e
             else:
                 f.write(f"{command}: not found\n")
 
+# Remove redirect tokens and filenames from the command
+def build_actual_command(commandList, redirectIndex, errorIndex):
+    skip = set()
+    for index in (redirectIndex, errorIndex):
+        if index != -1:
+            skip.add(index)      # (1> or 2>)
+            skip.add(index + 1)  # the filename after it
+    return [token for i, token in enumerate(commandList) if i not in skip]
+
+
 def main():
     mainLoop = True
     while mainLoop:
@@ -65,13 +75,17 @@ def main():
         if command:
             commandList = shlex.split(command)
             executable = find_executable(commandList[0])
-            redirectIndex = -1
+
             out_buf = StringIO()
             err_buf = StringIO()
-            
-            for index, command in enumerate(commandList):
-                if commandList[index] == "1>" or commandList[index] == ">":
+            redirectIndex = -1
+            errorIndex = -1
+
+            for index, token in enumerate(commandList):
+                if token in ("1>", ">"):
                     redirectIndex = index
+                elif token == "2>":
+                    errorIndex = index
 
             # exit command
             if commandList[0].lower() == "exit":
@@ -125,27 +139,37 @@ def main():
 
             # run if executable
             elif executable[0]:
-                actualCommand = commandList[:redirectIndex] if redirectIndex != -1 else commandList
-                if redirectIndex == -1:
-                    subprocess.run(
-                        actualCommand,
-                        executable=str(executable[2]))
-                else:
-                    process = subprocess.Popen(
-                        actualCommand,         
-                        executable=str(executable[2]),
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        text=True)
+                actualCommand = build_actual_command(commandList, redirectIndex, errorIndex)
 
+                stdout_target = subprocess.PIPE
+                stderr_target = subprocess.PIPE
+
+                process = subprocess.Popen(
+                    actualCommand,
+                    executable=str(executable[2]),
+                    stdout=stdout_target,
+                    stderr=stderr_target,
+                    text=True)
+
+                # Handle stdout
+                if redirectIndex != -1:
                     with open(commandList[redirectIndex + 1], "w") as f:
                         for line in process.stdout:
                             f.write(line)
+                else:
+                    for line in process.stdout:
+                        print(line, end="")
 
+                # Handle stderr
+                if errorIndex != -1:
+                    with open(commandList[errorIndex + 1], "w") as f:
+                        for line in process.stderr:
+                            f.write(line)
+                else:
                     for line in process.stderr:
                         print(line, end="")
-                        
-                    process.wait()
+
+                process.wait()
 
             # unknown command
             else:
