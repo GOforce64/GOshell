@@ -123,10 +123,17 @@ def completer(text, state):
     global _executables_cache
     if not _executables_cache:
         _executables_cache = get_executables()
-    
+
     builtins = list(command_types.keys())
     options = [cmd for cmd in builtins + _executables_cache if cmd.startswith(text)]
-    return options[state] if state < len(options) else None
+    
+    if state < len(options):
+        match = options[state]
+        # Add trailing space for commands that take arguments
+        if match in command_types:
+            return match + " "
+        return match
+    return None
 
 def main():
     if readline:
