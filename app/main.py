@@ -134,61 +134,64 @@ _tab_count = 0
 
 def completer(text, state):
     global _executables_cache, _last_completion_text, _tab_count
+    try:
+        # Check what's already been typed on the line
+        line = readline.get_line_buffer()
+        words = line.split()
+        print(repr(line), repr(words), repr(text))  # DEBUG
 
-    # Check what's already been typed on the line
-    line = readline.get_line_buffer()
-    words = line.split()
+        # If there's more than one word, or one word with a trailing space,
+        # we're completing a filename argument, not a command
+        is_argument = len(words) > 1 or (len(words) == 1 and line.endswith(" "))
+        if is_argument:
+            return filename_completer(text, state)
 
-    # If there's more than one word, or one word with a trailing space,
-    # we're completing a filename argument, not a command
-    is_argument = len(words) > 1 or (len(words) == 1 and line.endswith(" "))
-    if is_argument:
-        return filename_completer(text, state)
+        # Otherwise do command completion as before
+        if not _executables_cache:
+            _executables_cache = get_executables()
 
-    # Otherwise do command completion as before
-    if not _executables_cache:
-        _executables_cache = get_executables()
+        builtins = list(command_types.keys())
+        options = sorted(set(
+            cmd for cmd in builtins + _executables_cache if cmd.startswith(text)
+        ))
 
-    builtins = list(command_types.keys())
-    options = sorted(set(
-        cmd for cmd in builtins + _executables_cache if cmd.startswith(text)
-    ))
+        if text != _last_completion_text:
+            _last_completion_text = text
+            _tab_count = 0
 
-    if text != _last_completion_text:
-        _last_completion_text = text
-        _tab_count = 0
-
-    if state == 0:
-        _tab_count += 1
-
-    if not options:
-        return None
-
-    if len(options) == 1:
-        return (options[0] + " ") if state == 0 else None
-
-    lcp = longest_common_prefix(options)
-
-    if lcp != text:
         if state == 0:
-            _tab_count = 0
-            return lcp
+            _tab_count += 1
+
+        if not options:
+            return None
+
+        if len(options) == 1:
+            return (options[0] + " ") if state == 0 else None
+
+        lcp = longest_common_prefix(options)
+
+        if lcp != text:
+            if state == 0:
+                _tab_count = 0
+                return lcp
+            return None
+
+        if state == 0:
+            if _tab_count == 1:
+                sys.stdout.write("\x07")
+                sys.stdout.flush()
+                return None
+            if _tab_count == 2:
+                sys.stdout.write("\n")
+                sys.stdout.write("  ".join(options))
+                sys.stdout.write("\n$ ")
+                sys.stdout.write(text)
+                sys.stdout.flush()
+                _tab_count = 0
+                return None
+    except Exception as e:
+        sys.stderr.write(f"completer error: {type(e).__name__}: {e}\n")
         return None
-
-    if state == 0:
-        if _tab_count == 1:
-            sys.stdout.write("\x07")
-            sys.stdout.flush()
-            return None
-        if _tab_count == 2:
-            sys.stdout.write("\n")
-            sys.stdout.write("  ".join(options))
-            sys.stdout.write("\n$ ")
-            sys.stdout.write(text)
-            sys.stdout.flush()
-            _tab_count = 0
-            return None
-
     return None
 
 def filename_completer(text, state):
