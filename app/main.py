@@ -68,9 +68,7 @@ def build_actual_command(commandList, redirectIndex, errorIndex, appendIndex, ap
 
 def split_command(command):
     try:
-        # posix=False tells shlex to treat backslashes literally (instead of escape characters for Windows paths)
-        parts = shlex.split(command, posix=False)
-        return [strip_quotes(p) for p in parts]
+        return shlex.split(command, posix=True)
     except ValueError:
         return command.split()
     
