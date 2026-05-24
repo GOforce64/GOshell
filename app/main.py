@@ -58,12 +58,12 @@ def search_output(command, candidate = "", redirectIndex = -1, out_buf = None, e
                 f.write(f"{command}: not found\n")
 
 # Remove redirect tokens and filenames from the command
-def build_actual_command(commandList, redirectIndex, errorIndex):
+def build_actual_command(commandList, redirectIndex, errorIndex, appendIndex, appendErrorIndex):
     skip = set()
-    for index in (redirectIndex, errorIndex):
+    for index in (redirectIndex, errorIndex, appendIndex, appendErrorIndex):
         if index != -1:
-            skip.add(index)      # (1> or 2>)
-            skip.add(index + 1)  # the filename after it
+            skip.add(index)
+            skip.add(index + 1)
     return [token for i, token in enumerate(commandList) if i not in skip]
 
 def split_command(command):
@@ -97,12 +97,18 @@ def main():
             err_buf = StringIO()
             redirectIndex = -1
             errorIndex = -1
+            appendIndex = -1
+            appendErrorIndex = -1
 
             for index, token in enumerate(commandList):
                 if token in ("1>", ">"):
                     redirectIndex = index
                 elif token == "2>":
                     errorIndex = index
+                elif token in ("1>>", ">>"):
+                    appendIndex = index
+                elif token == "2>>":
+                    appendErrorIndex = index
 
             # exit command
             if commandList[0].lower() == "exit":
@@ -113,19 +119,27 @@ def main():
             elif commandList[0] == "echo":
                 # find the first redirect position (either 1> or 2>)
                 cutoff = min(
-                    redirectIndex if redirectIndex != -1 else len(commandList),
-                    errorIndex if errorIndex != -1 else len(commandList)
+                    redirectIndex    if redirectIndex    != -1 else len(commandList),
+                    errorIndex       if errorIndex       != -1 else len(commandList),
+                    appendIndex      if appendIndex      != -1 else len(commandList),
+                    appendErrorIndex if appendErrorIndex != -1 else len(commandList),
                 )
                 content = " ".join(commandList[1:cutoff]) + "\n"
 
                 if redirectIndex != -1:
                     with open(commandList[redirectIndex + 1], "w") as f:
                         f.write(content)
+                elif appendIndex != -1:
+                    with open(commandList[appendIndex + 1], "a") as f:
+                        f.write(content)
                 else:
                     print(content, end="")
-                # Always create the stderr file even if empty
+
                 if errorIndex != -1:
                     with open(commandList[errorIndex + 1], "w") as f:
+                        f.write("")
+                elif appendErrorIndex != -1:
+                    with open(commandList[appendErrorIndex + 1], "a") as f:
                         f.write("")
 
             # type command
@@ -167,21 +181,22 @@ def main():
 
             # run if executable
             elif executable[0]:
-                actualCommand = build_actual_command(commandList, redirectIndex, errorIndex)
-
-                stdout_target = subprocess.PIPE
-                stderr_target = subprocess.PIPE
+                actualCommand = build_actual_command(commandList, redirectIndex, errorIndex, appendIndex, appendErrorIndex)
 
                 process = subprocess.Popen(
                     actualCommand,
                     executable=str(executable[2]),
-                    stdout=stdout_target,
-                    stderr=stderr_target,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     text=True)
 
                 # Handle stdout
                 if redirectIndex != -1:
                     with open(commandList[redirectIndex + 1], "w") as f:
+                        for line in process.stdout:
+                            f.write(line)
+                elif appendIndex != -1:
+                    with open(commandList[appendIndex + 1], "a") as f:    # "a" = append
                         for line in process.stdout:
                             f.write(line)
                 else:
@@ -191,6 +206,10 @@ def main():
                 # Handle stderr
                 if errorIndex != -1:
                     with open(commandList[errorIndex + 1], "w") as f:
+                        for line in process.stderr:
+                            f.write(line)
+                elif appendErrorIndex != -1:
+                    with open(commandList[appendErrorIndex + 1], "a") as f:  # "a" = append
                         for line in process.stderr:
                             f.write(line)
                 else:
