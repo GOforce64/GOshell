@@ -75,8 +75,29 @@ def split_command(command):
         return command.split()
     
 def strip_quotes(token):
-    if len(token) >= 2 and token[0] == token[-1] and token[0] in ('"', "'"):
+    if len(token) >= 2 and token[0] == token[-1] and token[0] == "'":
+        # Single quotes: everything literal, just remove the quotes
         return token[1:-1]
+    elif len(token) >= 2 and token[0] == token[-1] and token[0] == '"':
+        # Double quotes: process escape sequences inside
+        inner = token[1:-1]
+        result = []
+        i = 0
+        while i < len(inner):
+            if inner[i] == '\\' and i + 1 < len(inner):
+                next_char = inner[i + 1]
+                if next_char in ('"', '\\', '$', '`', '\n'):
+                    # These are the only chars backslash escapes inside double quotes
+                    result.append(next_char)
+                    i += 2
+                else:
+                    # Backslash is literal if followed by anything else
+                    result.append('\\')
+                    i += 1
+            else:
+                result.append(inner[i])
+                i += 1
+        return ''.join(result)
     return token
 
 def main():
