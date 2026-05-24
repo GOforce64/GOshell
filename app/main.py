@@ -5,6 +5,13 @@ import subprocess
 import shlex
 from io import StringIO
 from contextlib import redirect_stdout, redirect_stderr
+try:
+    import readline
+except ImportError:
+    try:
+        import pyreadline3 as readline
+    except ImportError:
+        readline = None  # silently disable if neither available (dependent on OS)
 
 command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin", "pwd": "builtin", "cd": "builtin"}
 
@@ -98,7 +105,33 @@ def strip_quotes(token):
         return ''.join(result)
     return token
 
+def get_executables():
+    executables = []
+    path_value = os.environ.get("PATH", "")
+    for directory in path_value.split(os.pathsep):
+        p = Path(directory)
+        if p.is_dir():
+            for f in p.iterdir():
+                if f.is_file() and os.access(f, os.X_OK):
+                    executables.append(f.name)
+    return executables
+
+# Build once at startup
+_executables_cache = []
+
+def completer(text, state):
+    global _executables_cache
+    if not _executables_cache:
+        _executables_cache = get_executables()
+    
+    builtins = list(command_types.keys())
+    options = [cmd for cmd in builtins + _executables_cache if cmd.startswith(text)]
+    return options[state] if state < len(options) else None
+
 def main():
+    if readline:
+        readline.set_completer(completer)
+        readline.parse_and_bind("Tab: complete")
     mainLoop = True
     while mainLoop:
         sys.stdout.write("$ ")
