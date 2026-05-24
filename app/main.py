@@ -10,9 +10,14 @@ command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin", "pwd":
 
 
 def find_executable(command):
-    path_value = os.environ.get("PATH", "") # get returns PATH var or empty string if not found
+
+    # Handle direct/absolute/relative paths
+    p = Path(command)
+    if p.is_file() and os.access(p, os.X_OK):
+        return [True, command, p]
 
     # Windows executable extensions
+    path_value = os.environ.get("PATH", "")
     extensions = os.environ.get("PATHEXT", "").split(os.pathsep)
 
     # Linux/macOS support
@@ -61,6 +66,18 @@ def build_actual_command(commandList, redirectIndex, errorIndex):
             skip.add(index + 1)  # the filename after it
     return [token for i, token in enumerate(commandList) if i not in skip]
 
+def split_command(command):
+    try:
+        # posix=False tells shlex to treat backslashes literally (instead of escape characters for Windows paths)
+        parts = shlex.split(command, posix=False)
+        return [strip_quotes(p) for p in parts]
+    except ValueError:
+        return command.split()
+    
+def strip_quotes(token):
+    if len(token) >= 2 and token[0] == token[-1] and token[0] in ('"', "'"):
+        return token[1:-1]
+    return token
 
 def main():
     mainLoop = True
@@ -73,7 +90,7 @@ def main():
 
         # No input, new line
         if command:
-            commandList = shlex.split(command)
+            commandList = split_command(command)
             executable = find_executable(commandList[0])
 
             out_buf = StringIO()
