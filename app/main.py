@@ -12,6 +12,7 @@ except ImportError:
         import pyreadline3 as readline
     except ImportError:
         readline = None  # silently disable if neither available (dependent on OS)
+import glob
 
 command_types = {"echo": "builtin", "exit": "builtin", "type": "builtin", "pwd": "builtin", "cd": "builtin"}
 
