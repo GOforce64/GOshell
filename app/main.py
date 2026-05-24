@@ -128,11 +128,7 @@ def completer(text, state):
     options = [cmd for cmd in builtins + _executables_cache if cmd.startswith(text)]
     
     if state < len(options):
-        match = options[state]
-        # Add trailing space for commands that take arguments
-        if match in command_types:
-            return match + " "
-        return match
+        return options[state] + " "
     return None
 
 def main():
