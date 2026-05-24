@@ -118,17 +118,51 @@ def get_executables():
 
 # Build once at startup
 _executables_cache = []
+_last_completion_text = None
+_tab_count = 0
 
 def completer(text, state):
-    global _executables_cache
+    global _executables_cache, _last_completion_text, _tab_count
+
     if not _executables_cache:
         _executables_cache = get_executables()
 
     builtins = list(command_types.keys())
-    options = [cmd for cmd in builtins + _executables_cache if cmd.startswith(text)]
-    
-    if state < len(options):
-        return options[state] + " "
+    options = sorted(set(
+        cmd for cmd in builtins + _executables_cache if cmd.startswith(text)
+    ))
+
+    # Track how many tabs pressed for same text
+    if text != _last_completion_text:
+        _last_completion_text = text
+        _tab_count = 0
+
+    if state == 0:
+        _tab_count += 1
+
+        if len(options) == 0:
+            return None
+
+        if len(options) == 1:
+            # Only one match: complete it directly with trailing space
+            return options[0] + " " if state == 0 else None
+
+        if _tab_count == 1:
+            # First tab: ring the bell
+            sys.stdout.write("\x07")
+            sys.stdout.flush()
+            return None
+
+        if _tab_count == 2:
+            # Second tab: print all matches then reprint prompt with current input
+            sys.stdout.write("\n")
+            sys.stdout.write("  ".join(options))
+            sys.stdout.write("\n$ ")
+            sys.stdout.write(text)
+            sys.stdout.flush()
+            _tab_count = 0
+            return None
+
     return None
 
 def main():
