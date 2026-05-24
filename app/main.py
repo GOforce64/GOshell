@@ -135,6 +135,17 @@ _tab_count = 0
 def completer(text, state):
     global _executables_cache, _last_completion_text, _tab_count
 
+    # Check what's already been typed on the line
+    line = readline.get_line_buffer()
+    words = line.split()
+
+    # If there's more than one word, or one word with a trailing space,
+    # we're completing a filename argument, not a command
+    is_argument = len(words) > 1 or (len(words) == 1 and line.endswith(" "))
+    if is_argument:
+        return filename_completer(text, state)
+
+    # Otherwise do command completion as before
     if not _executables_cache:
         _executables_cache = get_executables()
 
@@ -159,19 +170,16 @@ def completer(text, state):
     lcp = longest_common_prefix(options)
 
     if lcp != text:
-        # Can complete further to the longest common prefix
         if state == 0:
-            _tab_count = 0  # reset so next tab starts fresh from new prefix
+            _tab_count = 0
             return lcp
         return None
 
-    # lcp == text, can't complete further
     if state == 0:
         if _tab_count == 1:
             sys.stdout.write("\x07")
             sys.stdout.flush()
             return None
-
         if _tab_count == 2:
             sys.stdout.write("\n")
             sys.stdout.write("  ".join(options))
@@ -182,6 +190,23 @@ def completer(text, state):
             return None
 
     return None
+
+def filename_completer(text, state):
+    """Complete filenames/directories matching text."""
+    if not text:
+        matches = glob.glob("*")
+    else:
+        matches = glob.glob(text + "*")
+    
+    # Add trailing space for files, trailing / for directories
+    results = []
+    for match in sorted(matches):
+        if os.path.isdir(match):
+            results.append(match + "/")
+        else:
+            results.append(match + " ")
+    
+    return results[state] if state < len(results) else None
 
 def main():
     if readline:
@@ -290,38 +315,48 @@ def main():
             elif executable[0]:
                 actualCommand = build_actual_command(commandList, redirectIndex, errorIndex, appendIndex, appendErrorIndex)
 
-                process = subprocess.Popen(
-                    actualCommand,
-                    executable=str(executable[2]),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True)
-
-                # Handle stdout
-                if redirectIndex != -1:
-                    with open(commandList[redirectIndex + 1], "w") as f:
-                        for line in process.stdout:
-                            f.write(line)
-                elif appendIndex != -1:
-                    with open(commandList[appendIndex + 1], "a") as f:    # "a" = append
-                        for line in process.stdout:
-                            f.write(line)
+                # If no redirection, let the process use the terminal directly
+                if redirectIndex == -1 and errorIndex == -1 and appendIndex == -1 and appendErrorIndex == -1:
+                    process = subprocess.Popen(
+                        actualCommand,
+                        executable=str(executable[2])
+                        # No stdout/stderr pipes — inherits terminal directly
+                    )
                 else:
-                    for line in process.stdout:
-                        print(line, end="")
+                    # Redirection needed, pipe and handle manually
+                    process = subprocess.Popen(
+                        actualCommand,
+                        executable=str(executable[2]),
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True
+                    )
 
-                # Handle stderr
-                if errorIndex != -1:
-                    with open(commandList[errorIndex + 1], "w") as f:
+                    # Handle stdout
+                    if redirectIndex != -1:
+                        with open(commandList[redirectIndex + 1], "w") as f:
+                            for line in process.stdout:
+                                f.write(line)
+                    elif appendIndex != -1:
+                        with open(commandList[appendIndex + 1], "a") as f:
+                            for line in process.stdout:
+                                f.write(line)
+                    else:
+                        for line in process.stdout:
+                            print(line, end="")
+
+                    # Handle stderr
+                    if errorIndex != -1:
+                        with open(commandList[errorIndex + 1], "w") as f:
+                            for line in process.stderr:
+                                f.write(line)
+                    elif appendErrorIndex != -1:
+                        with open(commandList[appendErrorIndex + 1], "a") as f:
+                            for line in process.stderr:
+                                f.write(line)
+                    else:
                         for line in process.stderr:
-                            f.write(line)
-                elif appendErrorIndex != -1:
-                    with open(commandList[appendErrorIndex + 1], "a") as f:  # "a" = append
-                        for line in process.stderr:
-                            f.write(line)
-                else:
-                    for line in process.stderr:
-                        print(line, end="")
+                            print(line, end="")
 
                 process.wait()
 
