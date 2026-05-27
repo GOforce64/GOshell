@@ -139,7 +139,6 @@ def completer(text, state):
         # Check what's already been typed on the line
         line = readline.get_line_buffer()
         words = line.split()
-        print(repr(line), repr(words), repr(text))  # DEBUG
 
         # If there's more than one word, or one word with a trailing space,
         # we're completing a filename argument, not a command
@@ -216,13 +215,10 @@ def main():
     if readline:
         readline.set_completer(completer)
         readline.parse_and_bind("Tab: complete")
+        readline.set_completer_delims(" \t\n")
     mainLoop = True
     while mainLoop:
-        sys.stdout.write("$ ")
-        sys.stdout.flush()
-
-        # Wait for user input
-        command = input()
+        command = input("$ ")
 
         # No input, new line
         if command:
